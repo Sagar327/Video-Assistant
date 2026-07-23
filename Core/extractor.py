@@ -3,52 +3,57 @@
 
 from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.runnables import RunnablePassthrough,RunnableLambda
 
 import os
-
+import json
 
 def get_llm():
     return ChatMistralAI(model="mistral-small-latest",mistral_api_key=os.getenv("MISTRAL_API_KEY"),temperature=0.2) 
     ## temperature decide what level of reply we will get ,the lower the value the basic the reply gets.
 
-def build_chain(system_prompt:str):
+
+def extract_all_insights(transcript: str) -> dict:
+    """Consolidates action items, key decisions, and questions into a single call to prevent 429 rate limits."""
     llm=get_llm()
-    return(RunnablePassthrough()| RunnableLambda(lambda x: {"text":x})
-            | ChatPromptTemplate.from_messages(
-                [
-                    ("system",system_prompt),
-                    ("human","{text}"),
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            "You are an expert meeting analyst. Analyze the transcript and extract insights into JSON.\n"
+            "Respond ONLY with a valid JSON object containing exactly these keys:\n"
+            "- 'action_items': Numbered list of tasks, owners, and deadlines (or 'None found.').\n"
+            "- 'key_decisions': Numbered list of decisions made (or 'None found.').\n"
+            "- 'open_questions': Numbered list of unresolved topics (or 'None found.')."
+        ),
+        ("human", "{text}")
+    ])
 
-                ]) | StrOutputParser()
-                )
-
-def extract_action_items(transcript:str)->str:
-    chain=build_chain(
-        "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all action items. For each provide:\n"
-        "- Task description\n"
-        "- Owner (who is responsible)\n"
-        "- Deadline (if mentioned, else write 'Not specified')\n\n"
-        "Format as a numbered list. If none found say 'No action items found.'"
+    chain = (
+        RunnablePassthrough() 
+        | RunnableLambda(lambda x: {"text": x}) 
+        | prompt 
+        | llm 
+        | StrOutputParser()
     )
 
-    return chain.invoke(transcript)
+    raw_output = chain.invoke(transcript)
 
-def extract_key_decisions(transcript: str) -> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all key decisions made. Format as a numbered list. "
-        "If none found say 'No key decisions found.'"
+    # Clean up formatting if model wraps output in ```json ... ```
+    cleaned = (
+        raw_output.strip()
+        .removeprefix("```json")
+        .removeprefix("```")
+        .removesuffix("```")
+        .strip()
     )
-    return chain.invoke(transcript)
 
-
-def extract_questions(transcript: str) -> str:
-    chain = build_chain(
-        "From the meeting transcript, extract all unresolved questions "
-        "or topics needing follow-up. Format as a numbered list. "
-        "If none found say 'No open questions found.'"
-    )
-    return chain.invoke(transcript)
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        # Fallback if json parsing fails
+        return {
+            "action_items": raw_output,
+            "key_decisions": "Parsed in main output.",
+            "open_questions": "Parsed in main output.",
+        }
