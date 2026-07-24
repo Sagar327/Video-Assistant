@@ -7,7 +7,7 @@ from pydub import AudioSegment
 # We slice each chunk into 25s pieces.
 SARVAM_PIECE_SECONDS=25
 
-WHISPER_MODEL= os.getenv("WHISPER_MODEL","small")
+WHISPER_MODEL= os.getenv("WHISPER_MODEL","tiny")
 
 _model=None
 
