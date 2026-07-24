@@ -70,7 +70,7 @@ def chunk_audio(wav_path:str,chunk_minutes : int =10 )-> list:  ## this meant th
         chunk_path=f"{wav_path}_chunk_{i}.wav"
         chunk.export(chunk_path,format="wav")
 
-        chunks.append(chunk_path) ## this addd the above loop output to the chunks list
+        chunks.append(chunk_path) 
 
     return chunks
 
