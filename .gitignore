@@ -10,9 +10,12 @@ __pycache__/
 .env
 
 # ChromaDB database
-chroma_db/
+vector_db/
 
-# VS Code settings (optional)
+# Downloaded audio/video files
+downloads/
+
+# VS Code settings
 .vscode/
 
 # Operating System files
