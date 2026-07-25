@@ -9,31 +9,32 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 ### This function convert the video to wav format
 
 def download_youtube_audio(url:str) ->str:
-    output_path=os.path.join(DOWNLOAD_DIR,"%(title)s.%(ext)s")
+    output_path = os.path.join(DOWNLOAD_DIR, "%(title).200s.%(ext)s")
     ydl_opts = {
-    "format": "bestaudio/best",
-    "outtmpl": output_path,
-    "quiet": False,
-    "noplaylist": True,
-    "socket_timeout": 120,
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["android"]
-        }
-    },
-    "postprocessors": [
-        {
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "wav",
-            "preferredquality": "192",
-        }
-    ],
-}
-    
-      
+        "format": "bestaudio/best",
+        "outtmpl": output_path,
+        "quiet": False,
+        "noplaylist": True,
+        "socket_timeout": 120,
+        "restrictfilenames": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android"]
+            }
+        },
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "wav",
+                "preferredquality": "192",
+            }
+        ],
+    }
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info=ydl.extract_info(url,download=True)
-        filename=ydl.prepare_filename(info).replace(".webm",".wav").replace(".m4a",".wav")
+        info = ydl.extract_info(url, download=True)
+        original_path = ydl.prepare_filename(info)
+        filename = os.path.splitext(original_path)[0] + ".wav"
     return filename
 
 

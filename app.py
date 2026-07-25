@@ -1,15 +1,14 @@
 import streamlit as st
-st.write("Starting AI Video Assistant...")
 import time
 from dotenv import load_dotenv
 
 load_dotenv()
 
- #from utils.audio_processor import process_input
-#from Core.transcriber import transcribe_all
-#from Core.summarize import summarize, generate_title
-#from Core.extractor import extract_all_insights
-#from Core.rag_engine import build_rag_chain, ask_question
+from utils.audio_processor import process_input
+from Core.transcriber import transcribe_all
+from Core.summarize import summarize, generate_title
+from Core.extractor import extract_all_insights
+from Core.rag_engine import build_rag_chain, ask_question
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -260,15 +259,15 @@ def render_step_bar(label: str, key: str, icon: str):
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div class="hero-title" style="font-size:1.6rem">🎬 AI Video</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-sub">Video Intelligence</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-title" style="font-size:1.6rem">🎬 AI Chatbot</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-sub">Video Assistant</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown('<span class="badge badge-purple">Configuration</span>', unsafe_allow_html=True)
 
     with st.form("pipeline_form", clear_on_submit=False):
-        source = st.text_input("Source URL or File Path", placeholder="YouTube Link or /path/to/file.mp4")
-        language = st.selectbox("Language", ["english", "hinglish"], index=0)
+        source = st.text_input("Source URL or File Path", placeholder="YouTube Link or file.mp4")
+        language = st.selectbox("Language", ["English", "Hinglish"], index=0)
         run_btn = st.form_submit_button("⚡ Start Analysis", use_container_width=True)
 
     if st.session_state.pipeline_done:
@@ -374,7 +373,7 @@ if st.session_state.result:
     with tab_summary:
         st.markdown(f"""
         <div class="glass-card">
-            <div class="card-label">Key Takeaways & Summary</div>
+            <div class="card-label">Key Takeaways </div>
             <div style="line-height: 1.7; font-size: 0.95rem;">{r['summary']}</div>
         </div>
         """, unsafe_allow_html=True)
