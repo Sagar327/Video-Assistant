@@ -1,13 +1,15 @@
 import streamlit as st
+st.write("Starting AI Video Assistant...")
 import time
 from dotenv import load_dotenv
-from utils.audio_processor import process_input
-from Core.transcriber import transcribe_all
-from Core.summarize import summarize, generate_title
-from Core.extractor import extract_all_insights
-from Core.rag_engine import build_rag_chain, ask_question
 
 load_dotenv()
+
+ #from utils.audio_processor import process_input
+#from Core.transcriber import transcribe_all
+#from Core.summarize import summarize, generate_title
+#from Core.extractor import extract_all_insights
+#from Core.rag_engine import build_rag_chain, ask_question
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
