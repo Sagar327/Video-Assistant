@@ -1,5 +1,7 @@
-import streamlit as st
+import os
 import time
+
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -266,7 +268,16 @@ with st.sidebar:
     st.markdown('<span class="badge badge-purple">Configuration</span>', unsafe_allow_html=True)
 
     with st.form("pipeline_form", clear_on_submit=False):
-        source = st.text_input("Source URL or File Path", placeholder="YouTube Link or file.mp4")
+        uploaded_file = st.file_uploader(
+            "Upload a local audio/video file",
+            type=["mp4", "mov", "mkv", "avi", "wav", "mp3", "m4a", "webm"],
+            help="Best option for Railway. Uploading the file avoids YouTube download restrictions.",
+        )
+        st.caption("Recommended: upload a file directly for the most reliable Railway experience.")
+        source = st.text_input(
+            "Or enter a YouTube URL or local file path",
+            placeholder="YouTube Link or file.mp4",
+        )
         language = st.selectbox("Language", ["English", "Hinglish"], index=0)
         run_btn = st.form_submit_button("⚡ Start Analysis", use_container_width=True)
 
@@ -290,68 +301,86 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Run Pipeline ────────────────────────────────────────────────────────────────
 if run_btn:
-    if not source.strip():
-        st.error("Please provide a valid YouTube URL or local file path.")
+    if uploaded_file is not None:
+        upload_dir = os.path.join("downloads", "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        upload_path = os.path.join(upload_dir, uploaded_file.name)
+        with open(upload_path, "wb") as handle:
+            handle.write(uploaded_file.getbuffer())
+        source_for_processing = upload_path
+        st.info("Using uploaded file. This is the most reliable option on Railway.")
+    elif source.strip():
+        source_for_processing = source.strip()
+        if any(marker in source_for_processing.lower() for marker in ["youtube.com", "youtu.be"]):
+            st.warning("YouTube URLs may be blocked on Railway. Uploading the media file is more reliable.")
     else:
-        st.session_state.pipeline_done = False
-        st.session_state.result = None
-        st.session_state.chat_history = []
-        st.session_state.pipeline_steps = {}
+        st.error("Please provide a valid YouTube URL, local file path, or upload a local media file.")
+        st.stop()
 
-        progress_placeholder = st.empty()
+    st.session_state.pipeline_done = False
+    st.session_state.result = None
+    st.session_state.chat_history = []
+    st.session_state.pipeline_steps = {}
 
-        def update_step(key, state):
-            st.session_state.pipeline_steps[key] = state
+    progress_placeholder = st.empty()
 
-        try:
-            with progress_placeholder.container():
-                st.info("⚡ Executing pipeline steps... Monitor live progress in the sidebar.")
+    def update_step(key, state):
+        st.session_state.pipeline_steps[key] = state
 
-            update_step("audio", "active")
-            chunks = process_input(source)
-            update_step("audio", "done")
+    try:
+        with progress_placeholder.container():
+            st.info("⚡ Executing pipeline steps... Monitor live progress in the sidebar.")
 
-            update_step("transcript", "active")
-            transcript = transcribe_all(chunks, language)
-            update_step("transcript", "done")
+        update_step("audio", "active")
+        chunks = process_input(source_for_processing)
+        update_step("audio", "done")
 
-            update_step("title", "active")
-            title = generate_title(transcript)
-            update_step("title", "done")
+        update_step("transcript", "active")
+        transcript = transcribe_all(chunks, language=language)
+        update_step("transcript", "done")
 
-            update_step("summary", "active")
-            summary = summarize(transcript)
-            update_step("summary", "done")
+        update_step("title", "active")
+        title = generate_title(transcript)
+        update_step("title", "done")
 
-            update_step("extract", "active")
-            # Called extract_all_insights directly to match imports
-            insights = extract_all_insights(transcript)
-            update_step("extract", "done")
+        update_step("summary", "active")
+        summary = summarize(transcript)
+        update_step("summary", "done")
 
-            update_step("rag", "active")
-            rag_chain = build_rag_chain(transcript)
-            update_step("rag", "done")
+        update_step("extract", "active")
+        insights = extract_all_insights(transcript)
+        update_step("extract", "done")
 
-            st.session_state.result = {
-                "title": title,
-                "transcript": transcript,
-                "summary": summary,
-                "action_items": insights.get("action_items", "None found"),
-                "key_decisions": insights.get("key_decisions", "None found"),
-                "open_questions": insights.get("open_questions", "None found"),
-                "rag_chain": rag_chain,
-            }
-            st.session_state.pipeline_done = True
-            progress_placeholder.success("✅ Analysis Complete!")
-            time.sleep(0.5)
-            progress_placeholder.empty()
-            st.rerun()
+        update_step("rag", "active")
+        rag_chain = build_rag_chain(transcript)
+        update_step("rag", "done")
 
-        except Exception as e:
-            for k in ["audio", "transcript", "title", "summary", "extract", "rag"]:
-                if st.session_state.pipeline_steps.get(k) == "active":
-                    st.session_state.pipeline_steps[k] = "pending"
-            progress_placeholder.error(f"❌ Error during execution: {e}")
+        st.session_state.result = {
+            "title": title,
+            "transcript": transcript,
+            "summary": summary,
+            "action_items": insights.get("action_items", "None found"),
+            "key_decisions": insights.get("key_decisions", "None found"),
+            "open_questions": insights.get("open_questions", "None found"),
+            "rag_chain": rag_chain,
+        }
+        st.session_state.pipeline_done = True
+        progress_placeholder.success("✅ Analysis Complete!")
+        time.sleep(0.5)
+        progress_placeholder.empty()
+        st.rerun()
+    except RuntimeError as exc:
+        for key in ["audio", "transcript", "title", "summary", "extract", "rag"]:
+            if st.session_state.pipeline_steps.get(key) == "active":
+                st.session_state.pipeline_steps[key] = "pending"
+        progress_placeholder.error(f"❌ Error during execution: {exc}")
+        st.error(str(exc))
+    except Exception as exc:
+        for key in ["audio", "transcript", "title", "summary", "extract", "rag"]:
+            if st.session_state.pipeline_steps.get(key) == "active":
+                st.session_state.pipeline_steps[key] = "pending"
+        progress_placeholder.error(f"❌ Error during execution: {exc}")
+        st.error(f"Pipeline failed: {exc}")
 
 # ── Render Results ──────────────────────────────────────────────────────────────
 if st.session_state.result:
