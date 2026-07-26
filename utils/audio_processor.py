@@ -33,6 +33,10 @@ def download_youtube_audio(url:str) ->str:
         ],
     }
 
+    cookies_path = os.getenv("YT_DLP_COOKIES")
+    if cookies_path:
+        ydl_opts["cookiefile"] = cookies_path
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)

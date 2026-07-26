@@ -373,14 +373,14 @@ if run_btn:
         for key in ["audio", "transcript", "title", "summary", "extract", "rag"]:
             if st.session_state.pipeline_steps.get(key) == "active":
                 st.session_state.pipeline_steps[key] = "pending"
-        progress_placeholder.error(f"❌ Error during execution: {exc}")
-        st.error(str(exc))
+        message = str(exc)
+        progress_placeholder.error(f"❌ {message}")
     except Exception as exc:
         for key in ["audio", "transcript", "title", "summary", "extract", "rag"]:
             if st.session_state.pipeline_steps.get(key) == "active":
                 st.session_state.pipeline_steps[key] = "pending"
-        progress_placeholder.error(f"❌ Error during execution: {exc}")
-        st.error(f"Pipeline failed: {exc}")
+        message = f"Pipeline failed: {exc}"
+        progress_placeholder.error(f"❌ {message}")
 
 # ── Render Results ──────────────────────────────────────────────────────────────
 if st.session_state.result:
