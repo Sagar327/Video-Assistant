@@ -1,6 +1,8 @@
+import os
+import re
+
 import yt_dlp
 from pydub import AudioSegment
-import os
 
 DOWNLOAD_DIR='downloads'
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -31,11 +33,23 @@ def download_youtube_audio(url:str) ->str:
         ],
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        original_path = ydl.prepare_filename(info)
-        filename = os.path.splitext(original_path)[0] + ".wav"
-    return filename
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            original_path = ydl.prepare_filename(info)
+            filename = os.path.splitext(original_path)[0] + ".wav"
+        return filename
+    except yt_dlp.utils.DownloadError as exc:
+        message = str(exc)
+        lowered = message.lower()
+        if "bot" in lowered or "sign in" in lowered or "cookies" in lowered or "captcha" in lowered:
+            raise RuntimeError(
+                "YouTube blocked the download because this environment is missing authentication/cookies. "
+                "Please use a video that is publicly accessible or provide YouTube cookies for yt-dlp."
+            ) from exc
+        raise RuntimeError(f"Failed to download YouTube audio: {message}") from exc
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        raise RuntimeError(f"Unexpected error while downloading YouTube audio: {exc}") from exc
 
 
 
